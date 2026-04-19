@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#D4AF37" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Namo Astro" />
+
+    <!-- SEO -->
+    <title>Shri Namo Narayanaya — Vedic Astrology & Vaasthu Office</title>
+    <meta name="description" content="Shri Namo Narayanaya Astrology Office — Expert Vedic Astrology, Vaasthu Shastra, and Numerology consultations by Shri RKJ Thulaseraja Acharya, Mailpatti, Tamil Nadu." />
+    <meta name="keywords" content="astrology, vaasthu, numerology, Tamil Nadu, Gudiyattam, Mailpatti, RKJ Thulaseraja Acharya" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+
+    <!-- Register Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('SW registered:', reg.scope))
+            .catch(err => console.warn('SW registration failed:', err));
+        });
+      }
+    </script>
+  </body>
+</html>
