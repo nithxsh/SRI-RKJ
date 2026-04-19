@@ -22,8 +22,11 @@ export default function Navbar({ setView, currentView }) {
       {/* Desktop Navbar */}
       <nav className="navbar desktop-nav glass-panel" style={{ display: 'flex', justifyContent: 'center' }}>
         <div className="navbar-content" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="logo" onClick={() => setView('home')} style={{ cursor: 'pointer', color: 'var(--accent-gold)', letterSpacing: '1px' }}>
-            SRI NAMO NARAYANAYA
+          <div className="logo" onClick={() => setView('home')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+            <img src="/favicon.png" alt="Logo" style={{ width: '30px', height: '30px', borderRadius: '4px' }} />
+            <span style={{ color: 'var(--accent-gold)', letterSpacing: '1px', fontWeight: 700, fontSize: '1.1rem' }}>
+              SRI NAMO NARAYANAYA
+            </span>
           </div>
           
           <div className="nav-links">

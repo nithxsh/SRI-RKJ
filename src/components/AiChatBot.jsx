@@ -157,7 +157,7 @@ export default function AiChatBot() {
       <button
         onClick={() => setIsOpen(o => !o)}
         style={{
-          position: 'fixed', bottom: '2rem', right: '2rem',
+          position: 'fixed', bottom: '6rem', right: '1.5rem',
           width: '62px', height: '62px', borderRadius: '50%',
           background: 'linear-gradient(135deg, #D4AF37, #20B2AA)',
           border: 'none', cursor: 'pointer', zIndex: 9999,
@@ -173,8 +173,8 @@ export default function AiChatBot() {
 
       {isOpen && (
         <div style={{
-          position: 'fixed', bottom: '7rem', right: '2rem',
-          width: '360px', maxHeight: '550px',
+          position: 'fixed', bottom: '11rem', right: '1.5rem',
+          width: 'min(90vw, 360px)', maxHeight: '60vh',
           background: 'rgba(10, 25, 47, 0.98)',
           backdropFilter: 'blur(15px)',
           border: '1px solid rgba(212,175,55,0.3)',
