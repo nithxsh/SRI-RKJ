@@ -69,37 +69,59 @@ export default function AiChatBot() {
         throw new Error('NO_KEY');
       }
 
-      // 2. Format history strictly (User -> Model -> User...)
-      // The Gemini API requires history to start with a 'user' message.
-      // Since our first message is an AI greeting, we skip it for the API payload.
-      let history = messages
-        .filter(m => m.role !== 'system')
-        .slice(1) // Skip the initial AI greeting
-        .map(m => ({
-          role: m.role === 'ai' ? 'model' : 'user',
-          parts: [{ text: m.text }]
-        }));
-
-      // Ensure the history alternates correctly
-      const contents = [];
-      let lastRole = null;
+      // 2. Format history strictly for Gemini API (User -> Model -> User...)
+      // Gemini requires first message to be 'user' and roles to alternate perfectly.
+      const apiContents = [];
       
-      for (const msg of history) {
-        if (msg.role !== lastRole) {
-          contents.push(msg);
-          lastRole = msg.role;
+      // We start with the historical messages (skipping the initial AI greeting if possible)
+      // Because we want the API to see a USER message first.
+      const relevantHistory = messages.filter(m => m.role !== 'system');
+      
+      // Construct a clean alternating list
+      let lastApiRole = null;
+      
+      // Skip the very first AI greeting to ensure we start with User
+      const historyToProcess = relevantHistory.length > 0 && relevantHistory[0].role === 'ai' 
+        ? relevantHistory.slice(1) 
+        : relevantHistory;
+
+      for (const m of historyToProcess) {
+        const currentRole = m.role === 'ai' ? 'model' : 'user';
+        if (currentRole !== lastApiRole) {
+          apiContents.push({
+            role: currentRole,
+            parts: [{ text: m.text }]
+          });
+          lastApiRole = currentRole;
+        } else if (apiContents.length > 0) {
+          // If roles match, append text to previous part to keep it valid
+          apiContents[apiContents.length - 1].parts[0].text += `\n\n${m.text}`;
         }
       }
 
-      // Final message must be the new user text
-      if (lastRole === 'user') {
-        contents[contents.length - 1].parts[0].text += `\n\n${text}`;
+      // 3. Add the CURRENT user message
+      if (lastApiRole === 'user' && apiContents.length > 0) {
+        apiContents[apiContents.length - 1].parts[0].text += `\n\n${text}`;
       } else {
-        contents.push({ role: 'user', parts: [{ text }] });
+        apiContents.push({
+          role: 'user',
+          parts: [{ text }]
+        });
+      }
+
+      // Final check: API requires at least one message and it MUST be 'user'
+      if (apiContents.length === 0 || apiContents[0].role !== 'user') {
+        // This should not happen with the logic above, but for safety:
+        if (apiContents.length > 0 && apiContents[0].role === 'model') {
+          apiContents.shift(); // Remove starting model message if it exists
+        }
+        if (apiContents.length === 0) {
+          apiContents.push({ role: 'user', parts: [{ text }] });
+        }
       }
 
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -107,17 +129,17 @@ export default function AiChatBot() {
             system_instruction: { 
               parts: [{ text: SYSTEM_PROMPT }] 
             },
-            contents,
+            contents: apiContents,
             generationConfig: { 
-              maxOutputTokens: 800, 
-              temperature: 0.8,
-              topP: 0.95
+              maxOutputTokens: 1000, 
+              temperature: 0.7,
+              topP: 0.9
             }
           })
         }
       );
 
-      // 3. Handle API Errors specifically
+      // 4. Handle API Response
       const data = await response.json();
       
       if (!response.ok) {
@@ -127,14 +149,20 @@ export default function AiChatBot() {
 
         if (code === 401 || code === 403) throw new Error('INVALID_KEY');
         if (code === 429) throw new Error('QUOTA_EXCEEDED');
-        if (msg.includes('API key not valid')) throw new Error('INVALID_KEY');
-        if (msg.includes('quota')) throw new Error('QUOTA_EXCEEDED');
+        if (msg.toLowerCase().includes('api key')) throw new Error('INVALID_KEY');
+        if (msg.toLowerCase().includes('quota')) throw new Error('QUOTA_EXCEEDED');
         
         throw new Error('CONNECTION_ERROR');
       }
 
       const aiResponse = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!aiResponse) throw new Error('EMPTY_RESPONSE');
+      if (!aiResponse) {
+        // Check if it was blocked by safety
+        if (data?.promptFeedback?.blockReason) {
+          throw new Error('BLOCKED');
+        }
+        throw new Error('EMPTY_RESPONSE');
+      }
 
       setMessages(prev => [...prev, { role: 'ai', text: aiResponse }]);
 
