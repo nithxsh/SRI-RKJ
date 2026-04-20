@@ -123,6 +123,65 @@ function MiniCalendar({ bookings }) {
   );
 }
 
+// ─── Password Change Form ─────────────────────────────────────────────
+function PasswordChangeForm() {
+  const { reauthenticate, changePassword } = useAuth();
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) return setError('Passwords do not match');
+    if (newPassword.length < 6) return setError('Password must be at least 6 characters');
+    
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    try {
+      // 1. Re-authenticate
+      await reauthenticate(currentPassword);
+      // 2. Change password
+      await changePassword(newPassword);
+      setSuccess('Password updated successfully!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      console.error(err);
+      setError('Failed to update password. Ensure current password is correct.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const inputStyle = { width: '100%', padding: '0.8rem 1.2rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: 'white', marginBottom: '1rem', fontSize: '0.95rem', outline: 'none', transition: 'border-color 0.3s' };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {error && <p style={{ color: '#EA4335', marginBottom: '1rem', fontSize: '0.85rem', fontWeight: 600 }}>❌ {error}</p>}
+      {success && <p style={{ color: '#6fc96f', marginBottom: '1rem', fontSize: '0.85rem', fontWeight: 600 }}>✅ {success}</p>}
+      
+      <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>Current Password</label>
+      <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required style={inputStyle} />
+      
+      <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>New Password</label>
+      <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required style={inputStyle} />
+      
+      <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>Confirm New Password</label>
+      <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required style={inputStyle} />
+      
+      <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%', padding: '1rem', marginTop: '0.5rem' }}>
+        {loading ? '⏳ Updating...' : '✨ Update Password'}
+      </button>
+    </form>
+  );
+}
+
 // ─── Main Admin Panel ───────────────────────────────────────────────────
 export default function AdminPanel() {
   const { currentUser } = useAuth();
@@ -453,16 +512,19 @@ export default function AdminPanel() {
   return (
     <section style={{ paddingTop: '120px', minHeight: '80vh', paddingBottom: '4rem' }} className="container">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+      <div className="glass-panel" style={{ padding: '2.5rem', marginBottom: '3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '2rem', borderLeft: '5px solid var(--accent-gold)' }}>
         <div>
-          <h2 style={{ fontFamily: 'var(--font-heading)', color: 'var(--accent-gold)', fontSize: '2.2rem', marginBottom: '0.3rem' }}>🛡 Admin Panel</h2>
-          <p style={{ color: 'var(--text-secondary)' }}>Shri Namo Narayanaya Astrology Office</p>
+          <h2 style={{ fontFamily: 'var(--font-heading)', color: 'var(--accent-gold)', fontSize: '2.5rem', marginBottom: '0.3rem' }}>🛡 Office Command Center</h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>Shri Namo Narayanaya Astrology Management</p>
         </div>
-        <button className="btn-primary" onClick={fetchBookings} style={{ padding: '0.7rem 1.5rem', borderRadius: '8px' }}>🔄 Refresh</button>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <button className="btn-secondary" onClick={fetchBookings} style={{ borderRadius: '12px', padding: '0.8rem 1.5rem' }}>🔄 Refresh</button>
+          {/* We'll add security tab later or just use it from tabs */}
+        </div>
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1.2rem', marginBottom: '3rem' }}>
         {[
           ['all','📦','Bookings',counts.all],
           ['payment','💳','Payments',counts.payment],
@@ -471,10 +533,20 @@ export default function AdminPanel() {
           ['completed','✔','Completed',counts.completed],
           ['cancelled','✕','Cancelled',counts.cancelled]
         ].map(([key,icon,label,count]) => (
-          <div key={key} onClick={() => { setFilter(key); setSearch(''); setActiveTab('bookings'); }} className="glass-panel" style={{ padding: '1.2rem', textAlign: 'center', cursor: 'pointer', borderRadius: '12px', border: filter === key ? '1px solid var(--accent-gold)' : '1px solid var(--glass-border)', transition: 'all 0.2s', background: filter === key ? 'rgba(212,175,55,0.05)' : 'transparent' }}>
-            <div style={{ fontSize: '1.3rem', marginBottom: '0.2rem' }}>{icon}</div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--accent-gold)' }}>{count}</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>{label}</div>
+          <div key={key} onClick={() => { setFilter(key); setSearch(''); setActiveTab('bookings'); }} className="glass-panel" style={{ 
+            padding: '1.5rem', 
+            textAlign: 'center', 
+            cursor: 'pointer', 
+            borderRadius: '16px', 
+            border: filter === key ? '2px solid var(--accent-gold)' : '1px solid var(--glass-border)', 
+            transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)', 
+            background: filter === key ? 'linear-gradient(135deg, rgba(212,175,55,0.1), transparent)' : 'rgba(255,255,255,0.02)',
+            transform: filter === key ? 'scale(1.05)' : 'scale(1)',
+            boxShadow: filter === key ? '0 10px 30px rgba(212,175,55,0.15)' : 'none'
+          }}>
+            <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem', filter: filter === key ? 'none' : 'grayscale(1)' }}>{icon}</div>
+            <div style={{ fontSize: '2.2rem', fontWeight: 700, color: filter === key ? 'var(--accent-gold)' : 'var(--text-primary)', marginBottom: '0.2rem' }}>{count}</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: 600 }}>{label}</div>
           </div>
         ))}
       </div>
@@ -484,7 +556,19 @@ export default function AdminPanel() {
         <button style={tabStyle('bookings')} onClick={() => setActiveTab('bookings')}>📋 Bookings</button>
         <button style={tabStyle('calendar')} onClick={() => setActiveTab('calendar')}>📅 Calendar</button>
         <button style={tabStyle('reviews')} onClick={() => setActiveTab('reviews')}>⭐ Reviews ({reviews.length})</button>
+        <button style={tabStyle('security')} onClick={() => setActiveTab('security')}>🛡️ Security</button>
       </div>
+
+      {/* ── SECURITY TAB ── */}
+      {activeTab === 'security' && (
+        <div className="glass-panel" style={{ padding: '2.5rem', borderRadius: '16px', maxWidth: '500px' }}>
+          <h3 style={{ marginBottom: '1.5rem', color: 'var(--accent-gold)' }}>🔐 Admin Password Management</h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+            Update your admin account password. For security, you will need to re-verify your current password.
+          </p>
+          <PasswordChangeForm />
+        </div>
+      )}
 
       {/* ── CALENDAR TAB ── */}
       {activeTab === 'calendar' && (
@@ -530,28 +614,29 @@ export default function AdminPanel() {
       {/* ── BOOKINGS TAB ── */}
       {activeTab === 'bookings' && (
         <>
-        <div style={{ display: 'flex', gap: '0.8rem', marginBottom: '1.2rem', alignItems: 'center' }}>
-          <div style={{ flex: 1 }}>
+        <div style={{ display: 'flex', gap: '1rem', marginBottom: '2.5rem', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '1.2rem', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ flex: 1, position: 'relative' }}>
+            <span style={{ position: 'absolute', left: '1.2rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>🔍</span>
             <input 
               type="text" 
-              placeholder="Search by name, mobile or email..." 
+              placeholder="Search seeker by name, mobile or email..." 
               value={search} 
               onChange={e => setSearch(e.target.value)}
-              style={{ ...inputStyle, width: '100%', padding: '0.9rem 1.2rem', fontSize: '1rem' }} 
+              style={{ ...inputStyle, width: '100%', padding: '1rem 1rem 1rem 3rem', fontSize: '1rem', borderRadius: '15px' }} 
             />
           </div>
-          <div style={{ position: 'relative', minWidth: '180px' }}>
-            <span style={{ position: 'absolute', top: '-18px', left: '10px', fontSize: '0.7rem', color: 'var(--accent-gold)', textTransform: 'uppercase' }}>📅 Filter by Date</span>
+          <div style={{ position: 'relative', minWidth: '220px' }}>
+            <span style={{ position: 'absolute', top: '-12px', left: '15px', fontSize: '0.65rem', color: 'var(--accent-gold)', fontWeight: 800, textTransform: 'uppercase', background: 'var(--bg-space)', padding: '0 5px' }}>📅 Filter by Date</span>
             <input 
               type="date" 
               value={dateFilter} 
               onChange={e => setDateFilter(e.target.value)}
-              style={{ ...inputStyle, width: '100%', padding: '0.9rem' }} 
+              style={{ ...inputStyle, width: '100%', padding: '1rem', borderRadius: '15px' }} 
             />
             {dateFilter && (
               <button 
                 onClick={() => setDateFilter('')}
-                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}
+                style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', cursor: 'pointer', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}
               >✕</button>
             )}
           </div>
@@ -573,65 +658,78 @@ export default function AdminPanel() {
                 const es = emailStatus[b.id];
 
                 return (
-                  <div key={b.id} className="glass-panel" style={{ padding: '1.8rem', borderRadius: '14px', borderLeft: '4px solid var(--accent-gold)' }}>
-                    {/* Top row */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.8rem', marginBottom: '1.2rem' }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', flexWrap: 'wrap' }}>
-                          <span style={{ fontFamily: 'var(--font-heading)', fontSize: '1.2rem', color: 'var(--accent-gold)', fontWeight: 700 }}>#{i+1} {b.name}</span>
-                          <span style={{ padding: '3px 12px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600, background: st.bg, color: st.color }}>{st.label}</span>
-                          <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '0.75rem', background: 'rgba(255,255,255,0.07)', color: 'var(--text-secondary)' }}>{b.category}</span>
+                  <div key={b.id} className="glass-panel" style={{ 
+                    padding: '2rem', 
+                    borderRadius: '24px', 
+                    borderLeft: `6px solid ${st.color}`,
+                    background: 'rgba(255,255,255,0.02)',
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                    position: 'relative'
+                  }}>
+                    {/* Index & Badge */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(212,175,55,0.1)', color: 'var(--accent-gold)', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: 800, fontSize: '1.2rem' }}>{i+1}</div>
+                        <div>
+                          <span style={{ fontFamily: 'var(--font-heading)', fontSize: '1.6rem', color: 'var(--text-primary)', fontWeight: 700 }}>{b.name}</span>
+                          <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', opacity: 0.7 }}>Booking ID: #{b.id.slice(-6).toUpperCase()} · {submittedAt}</p>
                         </div>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginTop: '0.3rem' }}>Submitted: {submittedAt}</p>
                       </div>
-                      {/* Status and Action buttons */}
-                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                        {['completed','cancelled'].map(s => (
-                          <button key={s} disabled={b.status === s || !!updatingId} onClick={() => updateStatus(b.id, s)}
-                            style={{ ...inputStyle, opacity: b.status === s ? 0.4 : 1, textTransform: 'capitalize', fontSize: '0.8rem' }}>{s}</button>
-                        ))}
-                        <button 
-                          onClick={() => deleteBooking(b.id, b.name)}
-                          disabled={!!updatingId}
-                          title="Delete Booking"
-                          style={{ ...inputStyle, background: 'rgba(234,67,53,0.1)', border: '1px solid rgba(234,67,53,0.3)', color: '#EA4335', padding: '0.5rem 0.7rem' }}
-                        >
-                          🗑️
-                        </button>
+                      <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                        <span style={{ padding: '6px 16px', borderRadius: '25px', fontSize: '0.8rem', fontWeight: 700, background: st.bg, color: st.color, border: `1px solid ${st.color}33` }}>{st.label}</span>
+                        <span style={{ padding: '6px 12px', borderRadius: '10px', fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)', fontWeight: 600 }}>{b.category}</span>
                       </div>
+                    </div>
+
+                    {/* Action Quick Bar */}
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.8rem', borderRadius: '15px' }}>
+                      {['completed','cancelled'].map(s => (
+                        <button key={s} disabled={b.status === s || !!updatingId} onClick={() => updateStatus(b.id, s)}
+                          style={{ ...inputStyle, padding: '0.5rem 1rem', borderRadius: '10px', opacity: b.status === s ? 0.3 : 1, textTransform: 'capitalize', fontSize: '0.75rem', fontWeight: 700, background: s === 'completed' ? 'rgba(111,201,111,0.1)' : 'rgba(234,67,53,0.1)', color: s === 'completed' ? '#6fc96f' : '#EA4335', border: 'none' }}>{s}</button>
+                      ))}
+                      <div style={{ flex: 1 }} />
+                      <button 
+                        onClick={() => deleteBooking(b.id, b.name)}
+                        disabled={!!updatingId}
+                        style={{ padding: '0.5rem 1rem', borderRadius: '10px', background: 'rgba(234,67,53,0.15)', color: '#EA4335', border: '1px solid rgba(234,67,53,0.2)', fontSize: '0.8rem', cursor: 'pointer' }}
+                      >
+                        🗑️ Delete
+                      </button>
                     </div>
 
                     {/* Details grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.6rem', marginBottom: '1.2rem' }}>
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+                      gap: '0.8rem', 
+                      marginBottom: '1.5rem'
+                    }}>
                       {[
-                        ["👤 Father's Name", b.fatherName],
-                        ['🎂 DOB', b.dob], ['🕐 Birth Time', b.time], ['📍 Birth Place', b.birthPlace],
-                        ['📞 Mobile', b.mobile], ['✉️ Email', b.email],
-                        ['🎯 Purpose', b.purpose === 'Other' ? b.otherPurpose || 'Other' : b.purpose],
-                        ['📅 Preferred Date', b.preferredDate], ['⏰ Preferred Slot', b.preferredSlot],
-                      ].map(([label, value]) => (
-                        <div key={label} style={{ background: 'rgba(255,255,255,0.03)', padding: '0.6rem 0.9rem', borderRadius: '8px' }}>
-                          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.15rem', textTransform: 'uppercase', letterSpacing: '0.8px' }}>{label}</div>
-                          <div style={{ color: 'var(--text-primary)', fontSize: '0.9rem', fontWeight: 500 }}>{value || '—'}</div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* ── Confirm Date Assignment ── */}
-                    <div style={{ background: 'rgba(32,178,170,0.06)', border: '1px solid rgba(32,178,170,0.2)', borderRadius: '10px', padding: '1rem', marginBottom: '1rem' }}>
-                      <p style={{ color: 'var(--accent-teal)', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.7rem', textTransform: 'uppercase', letterSpacing: '1px' }}>📅 Assign Confirmed Date</p>
-                      <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                        <div style={{ flex:'1', minWidth: '140px' }}>
-                          <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Date</label>
+                        ["👤 Father", b.fatherName],
+                        ['🎂 DOB', b.dob], ['🕐 Born', b.time], ['📍 Location', b.birthPlace],
+                        ['📞 Contact', b.mobile], ['✉️ Email', b.email],
+                        ['🎯 Goal', b.purpose === 'Other' ? b.otherPurpose || 'Other' : b.purpose],
+                                      {/* ── Assign/Confirmed Date ── */}
+                    <div style={{ 
+                      background: 'linear-gradient(135deg, rgba(32,178,170,0.08), rgba(32,178,170,0.02))', 
+                      border: '1px solid rgba(32,178,170,0.25)', 
+                      borderRadius: '18px', 
+                      padding: '1.5rem', 
+                      marginBottom: '1.2rem' 
+                    }}>
+                      <p style={{ color: 'var(--accent-teal)', fontSize: '0.85rem', fontWeight: 800, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '1.2px' }}>🗓️ Appointment Scheduling</p>
+                      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                        <div style={{ flex:'1', minWidth: '150px' }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', fontWeight: 600 }}>Confirmed Date</label>
                           <input type="date" value={cd.date}
                             onChange={e => setConfirmDates(prev => ({ ...prev, [b.id]: { ...cd, date: e.target.value } }))}
-                            style={{ ...inputStyle, width: '100%' }} />
+                            style={{ ...inputStyle, width: '100%', padding: '0.8rem', borderRadius: '12px' }} />
                         </div>
-                        <div style={{ flex:'1', minWidth: '160px' }}>
-                          <label style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Time Slot</label>
+                        <div style={{ flex:'1', minWidth: '180px' }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', fontWeight: 600 }}>Shift Slot</label>
                           <select value={cd.slot}
                             onChange={e => setConfirmDates(prev => ({ ...prev, [b.id]: { ...cd, slot: e.target.value } }))}
-                            style={{ ...inputStyle, width: '100%' }}>
+                            style={{ ...inputStyle, width: '100%', padding: '0.8rem', borderRadius: '12px' }}>
                             <option value="" style={{ background: '#0A192F' }}>Select slot</option>
                             <option value="Morning (9 AM - 12 PM)" style={{ background: '#0A192F' }}>🌅 Morning (9–12 PM)</option>
                             <option value="Afternoon (12 PM - 4 PM)" style={{ background: '#0A192F' }}>☀️ Afternoon (12–4 PM)</option>
@@ -641,58 +739,74 @@ export default function AdminPanel() {
                         <button
                           disabled={!cd.date || !!updatingId}
                           onClick={() => confirmBooking(b)}
-                          style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', border: 'none', background: cd.date ? 'var(--accent-teal)' : 'rgba(255,255,255,0.1)', color: cd.date ? '#000' : 'var(--text-secondary)', fontWeight: 700, cursor: cd.date ? 'pointer' : 'default', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-                          ✅ Confirm
+                          className="btn-primary"
+                          style={{ padding: '0.8rem 1.8rem', borderRadius: '12px', background: cd.date ? 'var(--accent-teal)' : 'rgba(255,255,255,0.05)', color: cd.date ? '#000' : 'var(--text-secondary)', fontWeight: 800, cursor: cd.date ? 'pointer' : 'default', border: 'none' }}>
+                          {b.confirmedDate ? '🔄 Update' : '✅ Confirm'}
                         </button>
                       </div>
                       {b.confirmedDate && (
-                        <p style={{ color: '#6fc96f', fontSize: '0.8rem', marginTop: '0.5rem' }}>✔ Confirmed: {b.confirmedDate} · {b.confirmedSlot}</p>
+                        <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#6fc96f', fontSize: '0.9rem', fontWeight: 600 }}>
+                          <span>🛡️ Booked for: {b.confirmedDate} at {b.confirmedSlot}</span>
+                        </div>
                       )}
                     </div>
 
-                    {/* ── Payment Info ── */}
+                    {/* ── Transaction Intelligence ── */}
                     {b.transactionId && (
-                      <div style={{ background: b.paymentStatus === 'verified' ? 'rgba(111,201,111,0.05)' : 'rgba(255,165,0,0.05)', border: `1px solid ${b.paymentStatus === 'verified' ? 'rgba(111,201,111,0.2)' : 'rgba(255,165,0,0.2)'}`, borderRadius: '10px', padding: '1rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ 
+                        background: b.paymentStatus === 'verified' ? 'rgba(111,201,111,0.05)' : 'rgba(255,165,0,0.05)', 
+                        border: `1px solid ${b.paymentStatus === 'verified' ? 'rgba(111,201,111,0.2)' : 'rgba(255,165,0,0.2)'}`, 
+                        borderRadius: '18px', 
+                        padding: '1.5rem', 
+                        marginBottom: '1.2rem', 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '1rem'
+                      }}>
                         <div>
-                          <p style={{ color: b.paymentStatus === 'verified' ? '#6fc96f' : '#FFA500', fontSize: '0.82rem', fontWeight: 600, textTransform: 'uppercase' }}>💳 UPI Payment: {b.paymentStatus === 'verified' ? 'Verified' : 'Waiting Verification'}</p>
-                          <p style={{ color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 700, marginTop: '0.2rem' }}>ID: {b.transactionId}</p>
-                          <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Amount: ₹{b.amount || '—'}</p>
+                          <p style={{ color: b.paymentStatus === 'verified' ? '#6fc96f' : '#FFA500', fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>💳 Transaction Status</p>
+                          <p style={{ color: 'white', fontSize: '1.3rem', fontWeight: 800, marginTop: '0.3rem', fontFamily: 'monospace' }}>{b.transactionId}</p>
+                          <p style={{ color: 'var(--accent-gold)', fontSize: '1rem', fontWeight: 700 }}>Amount: ₹{b.amount || '0'}</p>
                         </div>
-                        {b.paymentStatus !== 'verified' && (
-                          <button onClick={() => verifyPayment(b)} style={{ background: '#6fc96f', color: '#000', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}>Verify Now</button>
+                        {b.paymentStatus !== 'verified' ? (
+                          <button onClick={() => verifyPayment(b)} style={{ background: '#6fc96f', color: '#000', border: 'none', padding: '0.8rem 1.8rem', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 15px rgba(111,201,111,0.3)' }}>Verify Payment</button>
+                        ) : (
+                          <div style={{ color: '#6fc96f', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
+                            <span style={{ fontSize: '1.5rem' }}>🛡️</span> Verified
+                          </div>
                         )}
                       </div>
                     )}
 
-                    {/* ── Notify Buttons ── */}
-                    <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                    {/* ── Communication Hub ── */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.8rem', marginBottom: '1rem' }}>
                       <button
                         onClick={() => openWhatsApp(b)}
-                        style={{ padding: '0.65rem 1.3rem', borderRadius: '8px', border: 'none', background: '#25D366', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20.52 3.48A12 12 0 0 0 3.48 20.52L2 22l1.52-1.48A12 12 0 1 0 20.52 3.48zm-8.52 18a9.9 9.9 0 0 1-5.07-1.39l-.36-.22-3.74.98.99-3.64-.24-.38A9.93 9.93 0 0 1 12 2a10 10 0 0 1 0 20z"/><path d="M17.06 14.38c-.3-.15-1.77-.87-2.04-.97s-.47-.15-.67.15-.77.97-.95 1.17-.35.22-.65.07a8.17 8.17 0 0 1-2.4-1.48 9 9 0 0 1-1.66-2.07c-.17-.3 0-.46.13-.61s.3-.35.45-.52a2 2 0 0 0 .3-.5.55.55 0 0 0 0-.52c-.07-.15-.67-1.62-.92-2.22s-.49-.5-.67-.51h-.57a1.1 1.1 0 0 0-.8.37 3.36 3.36 0 0 0-1.05 2.5 5.83 5.83 0 0 0 1.22 3.1c.15.2 2.1 3.2 5.08 4.49a17.2 17.2 0 0 0 1.7.63 4.08 4.08 0 0 0 1.87.12c.57-.09 1.77-.72 2.02-1.42s.25-1.3.17-1.42-.26-.2-.56-.35z"/></svg>
+                        style={{ padding: '0.9rem', borderRadius: '14px', border: 'none', background: '#25D366', color: '#fff', fontWeight: 800, cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', boxShadow: '0 4px 12px rgba(37,211,102,0.2)' }}>
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20.52 3.48A12 12 0 0 0 3.48 20.52L2 22l1.52-1.48A12 12 0 1 0 20.52 3.48zm-8.52 18a9.9 9.9 0 0 1-5.07-1.39l-.36-.22-3.74.98.99-3.64-.24-.38A9.93 9.93 0 0 1 12 2a10 10 0 0 1 0 20z"/><path d="M17.06 14.38c-.3-.15-1.77-.87-2.04-.97s-.47-.15-.67.15-.77.97-.95 1.17-.35.22-.65.07a8.17 8.17 0 0 1-2.4-1.48 9 9 0 0 1-1.66-2.07c-.17-.3 0-.46.13-.61s.3-.35.45-.52a2 2 0 0 0 .3-.5.55.55 0 0 0 0-.52c-.07-.15-.67-1.62-.92-2.22s-.49-.5-.67-.51h-.57a1.1 1.1 0 0 0-.8.37 3.36 3.36 0 0 0-1.05 2.5 5.83 5.83 0 0 0 1.22 3.1c.15.2 2.1 3.2 5.08 4.49a17.2 17.2 0 0 0 1.7.63 4.08 4.08 0 0 0 1.87.12c.57-.09 1.77-.72 2.02-1.42s.25-1.3.17-1.42-.26-.2-.56-.35z"/></svg>
                         WhatsApp
                       </button>
                       <button
                         onClick={() => sendEmail(b)}
                         disabled={es === 'sending'}
-                        style={{ padding: '0.65rem 1.3rem', borderRadius: '8px', border: 'none', background: es === 'sent' ? '#6fc96f' : '#EA4335', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: es === 'sending' ? 0.7 : 1 }}>
-                        ✉️ {es === 'sending' ? 'Sending...' : es === 'sent' ? 'Email Sent!' : es === 'error' ? 'Failed – Retry' : 'Send Email'}
+                        style={{ padding: '0.9rem', borderRadius: '14px', border: 'none', background: es === 'sent' ? '#6fc96f' : 'linear-gradient(135deg, #FF4B2B, #FF416C)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', boxShadow: '0 4px 12px rgba(255,75,43,0.2)' }}>
+                        ✉️ {es === 'sending' ? 'Sending...' : es === 'sent' ? 'Sent' : 'Email'}
                       </button>
-                      {/* Push Notification Trigger */}
                       <button
                         onClick={() => {
                           const msg = b.status === 'confirmed' ? 'Your appointment on ' + b.confirmedDate + ' has been confirmed!' : 'Payment received. We are processing your request.';
                           sendPushNotification(b, 'Booking Update', msg);
                         }}
                         disabled={sendingPush[b.id] || !userTokens[b.userId]}
-                        style={{ padding: '0.65rem 1.3rem', borderRadius: '8px', border: 'none', background: '#3b82f6', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem', opacity: !userTokens[b.userId] ? 0.4 : 1 }}>
-                        🔔 {sendingPush[b.id] ? 'Sending...' : 'Send Push'}
+                        style={{ padding: '0.9rem', borderRadius: '14px', border: 'none', background: 'linear-gradient(135deg, #2193b0, #6dd5ed)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', opacity: !userTokens[b.userId] ? 0.4 : 1, boxShadow: '0 4px 12px rgba(33,147,176,0.2)' }}>
+                        🔔 {sendingPush[b.id] ? '...' : 'Push'}
                       </button>
-                      {/* Reschedule toggle */}
                       {b.status === 'confirmed' && (
                         <button
                           onClick={() => setReschedule(prev => ({ ...prev, [b.id]: { ...prev[b.id], open: !prev[b.id]?.open } }))}
-                          style={{ padding: '0.65rem 1.3rem', borderRadius: '8px', border: '1px solid rgba(212,175,55,0.4)', background: 'transparent', color: 'var(--accent-gold)', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem' }}>
+                          style={{ padding: '0.9rem', borderRadius: '14px', border: '1px solid rgba(212,175,55,0.4)', background: 'rgba(212,175,55,0.05)', color: 'var(--accent-gold)', fontWeight: 800, cursor: 'pointer', fontSize: '0.9rem' }}>
                           🗓️ Reschedule
                         </button>
                       )}

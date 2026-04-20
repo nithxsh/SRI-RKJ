@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import '../index.css';
@@ -63,24 +63,24 @@ function ReviewForm({ booking, onDone }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ marginTop: '1rem', background: 'rgba(212,175,55,0.05)', border: '1px solid rgba(212,175,55,0.2)', borderRadius: '10px', padding: '1.2rem' }}>
-      <p style={{ color: 'var(--accent-gold)', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px' }}>⭐ Leave Your Review</p>
+    <form onSubmit={handleSubmit} style={{ marginTop: '1.5rem', background: 'rgba(212,175,55,0.05)', border: '1px solid rgba(212,175,55,0.2)', borderRadius: '15px', padding: '1.5rem' }}>
+      <p style={{ color: 'var(--accent-gold)', fontWeight: 600, fontSize: '0.9rem', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>⭐ Your divine feedback</p>
       <StarPicker value={rating} onChange={setRating} />
       {error && <p style={{ color: '#EA4335', fontSize: '0.82rem', marginTop: '0.4rem' }}>{error}</p>}
       <textarea
-        placeholder="Share your experience... (optional)"
+        placeholder="How was your consultation experience?"
         value={comment}
         onChange={e => setComment(e.target.value)}
         rows={3}
-        style={{ width: '100%', marginTop: '0.8rem', padding: '0.8rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: 'white', resize: 'vertical', fontSize: '0.9rem', fontFamily: 'Inter, sans-serif' }}
+        style={{ width: '100%', marginTop: '1rem', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: 'white', resize: 'vertical', fontSize: '0.95rem', fontFamily: 'Inter, sans-serif', outline: 'none' }}
       />
       <button
         type="submit"
         disabled={submitting}
         className="btn-primary"
-        style={{ marginTop: '0.8rem', padding: '0.7rem 1.5rem', fontSize: '0.9rem', borderRadius: '8px' }}
+        style={{ marginTop: '1rem', padding: '0.8rem 2rem', fontSize: '1rem', borderRadius: '12px', width: '100%' }}
       >
-        {submitting ? '⏳ Submitting...' : '✨ Submit Review'}
+        {submitting ? '⏳ Submitting...' : '✨ Post Review'}
       </button>
     </form>
   );
@@ -100,12 +100,10 @@ export default function Dashboard() {
     async function fetchAll() {
       setLoading(true);
       try {
-        // Fetch my bookings (removed orderBy to avoid manual index requirement)
         const bq = query(collection(db, 'bookings'), where('userId', '==', currentUser.uid));
         const bSnap = await getDocs(bq);
         const fetchedBookings = bSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         
-        // Sort client-side by createdAt descending
         fetchedBookings.sort((a, b) => {
           const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
           const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
@@ -114,7 +112,6 @@ export default function Dashboard() {
         
         setMyBookings(fetchedBookings);
 
-        // Fetch reviews I've already submitted (to disable duplicate)
         const rq = query(collection(db, 'reviews'), where('userId', '==', currentUser.uid));
         const rSnap = await getDocs(rq);
         setMyReviews(new Set(rSnap.docs.map(d => d.data().bookingId)));
@@ -177,7 +174,7 @@ export default function Dashboard() {
 
           <div class="footer">
             <p>Shri Namo Narayanaya Astrology Office, Mailpatti, Tamil Nadu</p>
-            <p>Contact: {import.meta.env.VITE_OFFICE_PHONE || '9751442007'} | {import.meta.env.VITE_OFFICE_PHONE_ALT || '9865546763'}</p>
+            <p>Contact: {import.meta.env.VITE_OFFICE_PHONE || '9751442007'}</p>
             <p>Thank you for seeking divine guidance.</p>
             <button onclick="window.print()" class="no-print" style="margin-top: 20px; padding: 10px 20px; background: #0A192F; color: white; border: none; border-radius: 5px; cursor: pointer;">Print Receipt</button>
           </div>
@@ -188,32 +185,34 @@ export default function Dashboard() {
   }
 
   return (
-    <section id="dashboard" className="dashboard-section container" style={{ paddingTop: '120px', minHeight: '80vh', paddingBottom: '4rem' }}>
+    <section id="dashboard" className="dashboard-section container" style={{ paddingTop: '120px', minHeight: '80vh', paddingBottom: '6rem' }}>
       {/* Header */}
-      <div style={{ marginBottom: '3rem' }}>
-        <h2 className="section-title" style={{ textAlign: 'left', marginBottom: '0.5rem' }}>Seeker Dashboard</h2>
-        <p className="text-secondary">Welcome back, <strong style={{ color: 'var(--accent-gold)' }}>{displayName}</strong>.</p>
+      <div className="glass-panel" style={{ padding: '2.5rem', marginBottom: '3rem', borderLeft: '5px solid var(--accent-gold)', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '8rem', opacity: 0.05, transform: 'rotate(-15deg)', pointerEvents: 'none' }}>🕉️</div>
+        <h2 className="section-title" style={{ textAlign: 'left', marginBottom: '0.8rem', fontSize: '2.5rem' }}>Seeker Dashboard</h2>
+        <p className="text-secondary" style={{ fontSize: '1.1rem' }}>Welcome back, <strong style={{ color: 'var(--accent-gold)', borderBottom: '2px solid' }}>{displayName}</strong>.</p>
         {currentUser?.email && (
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.3rem' }}>
-            🔐 Logged in as {currentUser.email}
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.5rem', opacity: 0.8 }}>
+            🔐 Secure Session: {currentUser.email}
           </p>
         )}
       </div>
 
-      <h3 style={{ marginBottom: '1.5rem', color: 'var(--accent-teal)' }}>📋 My Consultation Requests</h3>
+      <h3 style={{ marginBottom: '1.5rem', color: 'var(--accent-teal)', fontSize: '1.8rem' }}>📋 My Consultations</h3>
 
       {loading ? (
-        <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', borderRadius: '12px' }}>
-          <p style={{ color: 'var(--text-secondary)' }}>⏳ Loading your bookings...</p>
+        <div className="glass-panel" style={{ padding: '4rem', textAlign: 'center', borderRadius: '20px' }}>
+          <div className="spinner" style={{ margin: '0 auto 1rem' }}></div>
+          <p style={{ color: 'var(--text-secondary)' }}>Gathering your celestial records...</p>
         </div>
       ) : myBookings.length === 0 ? (
-        <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', borderRadius: '12px' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔮</div>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>You haven't made any consultation requests yet.</p>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.88rem' }}>Use the "Book Now" button on the home page to schedule your session.</p>
+        <div className="glass-panel" style={{ padding: '4rem', textAlign: 'center', borderRadius: '20px' }}>
+          <div style={{ fontSize: '4rem', marginBottom: '1.5rem', filter: 'drop-shadow(0 0 10px var(--accent-gold))' }}>🔮</div>
+          <p style={{ color: 'var(--text-primary)', fontSize: '1.2rem', marginBottom: '0.5rem' }}>No consultations found.</p>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Ready to seek guidance? Use the Book button to start.</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {myBookings.map((b) => {
             const st = STATUS_COLORS[b.status] || STATUS_COLORS.pending;
             const submittedAt = b.createdAt?.toDate ? b.createdAt.toDate().toLocaleDateString('en-IN') : '—';
@@ -222,65 +221,101 @@ export default function Dashboard() {
             const justReviewed = reviewedNow.has(b.id);
 
             return (
-              <div key={b.id} className="glass-panel" style={{ padding: '1.8rem', borderRadius: '14px', borderLeft: `4px solid ${isCompleted ? '#6fc96f' : 'var(--accent-teal)'}` }}>
-                {/* Top row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
-                  <div>
-                    <h4 style={{ color: 'var(--accent-gold)', fontSize: '1.1rem', marginBottom: '0.2rem' }}>
-                      {b.category} — {b.purpose === 'Other' ? b.otherPurpose || 'Other' : b.purpose}
+              <div key={b.id} className="glass-panel" style={{ 
+                padding: '2rem', 
+                borderRadius: '24px', 
+                borderLeft: `6px solid ${isCompleted ? '#6fc96f' : 'var(--accent-teal)'}`,
+                boxShadow: '0 12px 40px rgba(0,0,0,0.4)',
+                background: 'rgba(255, 255, 255, 0.02)',
+                position: 'relative'
+              }}>
+                {/* Status Badge */}
+                <span style={{ 
+                  position: 'absolute',
+                  top: '2rem',
+                  right: '2rem',
+                  padding: '8px 18px', 
+                  borderRadius: '30px', 
+                  fontSize: '0.8rem', 
+                  fontWeight: 700, 
+                  background: st.bg, 
+                  color: st.color, 
+                  border: `1px solid ${st.color}33`,
+                  whiteSpace: 'nowrap' 
+                }}>
+                  {st.label}
+                </span>
+
+                <div style={{ marginBottom: '1.5rem' }}>
+                    <h4 style={{ color: 'var(--accent-gold)', fontSize: '1.5rem', marginBottom: '0.3rem', fontFamily: 'var(--font-heading)' }}>
+                      {b.category}
                     </h4>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>Submitted on {submittedAt}</p>
-                  </div>
-                  <span style={{ padding: '5px 14px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 600, background: st.bg, color: st.color, whiteSpace: 'nowrap' }}>
-                    {st.label}
-                  </span>
+                    <p style={{ color: 'var(--accent-teal)', fontSize: '1rem', fontWeight: 600 }}>
+                      {b.purpose === 'Other' ? b.otherPurpose || 'Other' : b.purpose}
+                    </p>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '0.4rem' }}>ID: #{b.id.slice(-6).toUpperCase()} · {submittedAt}</p>
                 </div>
 
-                {/* Details */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.5rem', marginBottom: '1rem' }}>
-                  {[['🎂 DOB', b.dob], ['🕐 Time', b.time], ['📍 Birth Place', b.birthPlace], ['📞 Mobile', b.mobile],
-                    ['📅 Preferred Date', b.preferredDate], ['⏰ Preferred Slot', b.preferredSlot]].map(([label, val]) => (
-                    <div key={label} style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem 0.8rem', borderRadius: '8px' }}>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '0.1rem' }}>{label}</div>
-                      <div style={{ color: 'var(--text-primary)', fontSize: '0.88rem' }}>{val || '—'}</div>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
+                  gap: '1.2rem', 
+                  marginBottom: '1.5rem',
+                  background: 'rgba(255,255,255,0.03)',
+                  padding: '1.5rem',
+                  borderRadius: '16px'
+                }}>
+                  {[
+                    ['📅 Date', b.preferredDate], 
+                    ['⏰ Slot', b.preferredSlot],
+                    ['🎂 DOB', b.dob], 
+                    ['🕐 Born', b.time], 
+                    ['📍 Place', b.birthPlace]
+                  ].map(([label, val]) => (
+                    <div key={label}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--accent-gold)', marginBottom: '0.2rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>{label}</div>
+                      <div style={{ color: 'var(--text-primary)', fontSize: '1.05rem', fontWeight: 500 }}>{val || '—'}</div>
                     </div>
                   ))}
                 </div>
 
-                {/* Confirmed date if exists */}
                 {b.confirmedDate && (
-                  <div style={{ background: 'rgba(32,178,170,0.08)', border: '1px solid rgba(32,178,170,0.25)', borderRadius: '8px', padding: '0.7rem 1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                      <span style={{ fontSize: '1.2rem' }}>📅</span>
+                  <div style={{ 
+                    background: 'linear-gradient(135deg, rgba(32,178,170,0.1), transparent)', 
+                    border: '1px solid rgba(32,178,170,0.3)', 
+                    borderRadius: '20px', 
+                    padding: '1.5rem', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '1.5rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                      <div style={{ fontSize: '2.5rem' }}>🗓️</div>
                       <div>
-                        <p style={{ color: '#20B2AA', fontWeight: 600, fontSize: '0.9rem' }}>Confirmed Appointment</p>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>{b.confirmedDate} · {b.confirmedSlot}</p>
+                        <p style={{ color: 'var(--accent-teal)', fontWeight: 800, fontSize: '1.2rem' }}>Confirmed Session</p>
+                        <p style={{ color: 'var(--text-primary)', fontSize: '1.1rem' }}>{b.confirmedDate} · {b.confirmedSlot}</p>
                       </div>
                     </div>
                     {b.paymentStatus === 'verified' && (
-                      <button 
-                        onClick={() => printReceipt(b)}
-                        style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: 'rgba(212,175,55,0.15)', border: '1px solid var(--accent-gold)', color: 'var(--accent-gold)', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}
-                      >
+                      <button onClick={() => printReceipt(b)} className="btn-primary" style={{ padding: '0.8rem 2rem', borderRadius: '14px', background: 'var(--accent-gold)', color: '#000', fontWeight: 700 }}>
                         🧾 Receipt
                       </button>
                     )}
                   </div>
                 )}
 
-                {/* Review section — only for completed bookings */}
                 {isCompleted && (
-                  <div>
-                    {justReviewed && (
-                      <div style={{ background: 'rgba(111,201,111,0.1)', border: '1px solid rgba(111,201,111,0.3)', borderRadius: '10px', padding: '1rem', textAlign: 'center' }}>
-                        <p style={{ color: '#6fc96f', fontWeight: 600 }}>🙏 Thank you for your review!</p>
+                  <div style={{ marginTop: '1.5rem' }}>
+                    {justReviewed ? (
+                      <div style={{ background: 'rgba(111,201,111,0.1)', border: '1px solid rgba(111,201,111,0.3)', borderRadius: '15px', padding: '1.2rem', textAlign: 'center' }}>
+                        <p style={{ color: '#6fc96f', fontWeight: 700, fontSize: '1.1rem' }}>🙏 Review received. Blessings!</p>
                       </div>
-                    )}
-                    {!alreadyReviewed && !justReviewed && (
+                    ) : !alreadyReviewed ? (
                       <ReviewForm booking={b} onDone={handleReviewDone} />
-                    )}
-                    {alreadyReviewed && !justReviewed && (
-                      <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.82rem', marginTop: '0.5rem' }}>✔ You have already reviewed this session.</p>
+                    ) : (
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', opacity: 0.6, fontStyle: 'italic' }}>✨ You've shared your light on this session.</p>
                     )}
                   </div>
                 )}

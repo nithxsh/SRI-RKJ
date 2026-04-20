@@ -34,6 +34,19 @@ export function AuthProvider({ children }) {
     return signOut(auth);
   }
 
+  function changePassword(newPassword) {
+    if (!currentUser) return Promise.reject("No user logged in");
+    return import('firebase/auth').then(({ updatePassword }) => updatePassword(currentUser, newPassword));
+  }
+
+  function reauthenticate(password) {
+    if (!currentUser || !currentUser.email) return Promise.reject("No user or email");
+    return import('firebase/auth').then(({ EmailAuthProvider, reauthenticateWithCredential }) => {
+      const credential = EmailAuthProvider.credential(currentUser.email, password);
+      return reauthenticateWithCredential(currentUser, credential);
+    });
+  }
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, user => {
       setCurrentUser(user);
@@ -47,7 +60,9 @@ export function AuthProvider({ children }) {
     signup,
     login,
     loginWithGoogle,
-    logout
+    logout,
+    changePassword,
+    reauthenticate
   };
 
   return (
