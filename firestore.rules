@@ -2,33 +2,37 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper functions
+    function isAdmin() {
+      return request.auth != null && 
+             (request.auth.token.email == 'nithishog31@gmail.com' || 
+              request.auth.token.email == 'rkjthulasiraja@gmail.com' ||
+              request.auth.token.email == 'nithishwarang@gmail.com');
+    }
+
     // ── Bookings ──────────────────────────────────────────────────────
     match /bookings/{bookingId} {
       allow create: if true;
       allow read: if request.auth != null && (
                     resource.data.userId == request.auth.uid || 
-                    request.auth.token.email == 'nithishog31@gmail.com'
+                    isAdmin()
                   );
       allow update: if request.auth != null && (
-                      request.auth.token.email == 'nithishog31@gmail.com' ||
+                      isAdmin() ||
                       (resource.data.userId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['transactionId', 'paymentStatus']))
                     );
-      allow delete: if request.auth != null && 
-                       request.auth.token.email == 'nithishog31@gmail.com';
+      allow delete: if isAdmin();
     }
 
     // ── User Tokens for Push ─────────────────────────────────────────
     match /users/{userId} {
-      // User can only write their own token
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      // Admin can read all tokens to send push
-      allow read: if request.auth != null && request.auth.token.email == 'nithishog31@gmail.com';
+      allow read: if isAdmin();
     }
 
     // ── Admin Private Notes ──────────────────────────────────────────
     match /adminNotes/{bookingId} {
-      allow read, write: if request.auth != null &&
-                             request.auth.token.email == 'nithishog31@gmail.com';
+      allow read, write: if isAdmin();
     }
 
     // ── Reviews ───────────────────────────────────────────────────────
@@ -36,8 +40,7 @@ service cloud.firestore {
       allow read: if true;
       allow create: if request.auth != null &&
                       request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null &&
-                               request.auth.token.email == 'nithishog31@gmail.com';
+      allow update, delete: if isAdmin();
     }
   }
 }

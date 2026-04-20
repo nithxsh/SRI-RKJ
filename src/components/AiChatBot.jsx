@@ -54,16 +54,14 @@ export default function AiChatBot() {
     }
   };
 
-  const sendMessage = useCallback(async (forceText = null, isRetry = false) => {
+  const sendMessage = useCallback(async (forceText = null) => {
     const text = (forceText || input).trim();
     if (!text || loading) return;
 
-    // Add user message to UI (skip if it's a retry as it's already in the UI)
-    if (!isRetry) {
-      const userMsg = { role: 'user', text };
-      setMessages(prev => [...prev, userMsg]);
-      setInput('');
-    }
+    // 1. Update UI immediately
+    const userMsg = { role: 'user', text };
+    setMessages(prev => [...prev, userMsg]);
+    setInput('');
     setLoading(true);
 
     try {
@@ -71,7 +69,8 @@ export default function AiChatBot() {
         throw new Error('NO_KEY');
       }
 
-      // 1. Prepare history for Gemini API (Vedic History)
+      // 2. Format history strictly (User -> Model -> User...)
+      // We take the existing messages and convert them to API format
       let history = messages
         .filter(m => m.role !== 'system')
         .map(m => ({
@@ -79,25 +78,23 @@ export default function AiChatBot() {
           parts: [{ text: m.text }]
         }));
 
-      // History must alternate User -> Model. If first is model, we drop it.
-      if (history.length > 0 && history[0].role === 'model') {
-        history.shift();
+      // Ensure the history alternates correctly
+      const contents = [];
+      let lastRole = null;
+      
+      for (const msg of history) {
+        if (msg.role !== lastRole) {
+          contents.push(msg);
+          lastRole = msg.role;
+        }
       }
 
-      // Prepend SYSTEM_PROMPT to the first user message if history is short
-      // This is the most compatible way across all Gemini versions.
-      const contents = [...history];
-      
-      if (contents.length === 0) {
-        contents.push({
-          role: 'user',
-          parts: [{ text: `SYSTEM_INSTRUCTION: ${SYSTEM_PROMPT}\n\nUSER_FIRST_MESSAGE: ${text}` }]
-        });
+      // Final message must be the new user text
+      if (lastRole === 'user') {
+        // If the last thing was a user message, we append to it (though rare in this UI)
+        contents[contents.length - 1].parts[0].text += `\n\n${text}`;
       } else {
-        contents.push({
-          role: 'user',
-          parts: [{ text: text }]
-        });
+        contents.push({ role: 'user', parts: [{ text }] });
       }
 
       const response = await fetch(
@@ -106,8 +103,15 @@ export default function AiChatBot() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            system_instruction: { 
+              parts: [{ text: SYSTEM_PROMPT }] 
+            },
             contents,
-            generationConfig: { maxOutputTokens: 500, temperature: 0.7 }
+            generationConfig: { 
+              maxOutputTokens: 800, 
+              temperature: 0.8,
+              topP: 0.95
+            }
           })
         }
       );
@@ -115,31 +119,32 @@ export default function AiChatBot() {
       const data = await response.json();
       
       if (!response.ok) {
-        console.error("Gemini API Error Detail:", data);
-        // Final fallback to v1beta if v1 fails on model name
-        if (response.status === 404 && !isRetry) {
-           throw new Error("MODEL_NOT_FOUND");
-        }
-        throw new Error(data?.error?.message || 'API_RESPONSE_ERROR');
+        console.error("Gemini API Error:", data);
+        const errorMsg = data?.error?.message || 'CONNECTION_ERROR';
+        if (errorMsg.includes('API key not valid')) throw new Error('INVALID_KEY');
+        if (errorMsg.includes('quota')) throw new Error('QUOTA_EXCEEDED');
+        throw new Error(errorMsg);
       }
 
-      const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'I apologize, I could not process that.';
-      setMessages(prev => [...prev, { role: 'ai', text: aiText }]);
+      const aiResponse = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!aiResponse) throw new Error('EMPTY_RESPONSE');
+
+      setMessages(prev => [...prev, { role: 'ai', text: aiResponse }]);
 
     } catch (err) {
-      console.error("Chat Error:", err);
+      console.error("ChatBot Error Details:", err);
       
-      if (err.message === 'MODEL_NOT_FOUND' && !isRetry) {
-         // Recursive attempt with v1beta as the final stand
-         return sendMessage(text, true); 
+      let friendlyError = "I'm having trouble connecting to the stars right now. Please try again in 10 seconds.";
+      
+      if (err.message === 'NO_KEY' || err.message === 'INVALID_KEY') {
+        friendlyError = "⚠️ Divine Connection Error: AI API Key is missing or invalid. Please check your dashboard.";
+      } else if (err.message === 'QUOTA_EXCEEDED') {
+        friendlyError = "⚠️ High Traffic: The AI is currently overwhelmed with seekers. Please try again in a few minutes.";
+      } else if (err.message === 'EMPTY_RESPONSE') {
+        friendlyError = "The cosmos was silent. Could you please rephrase your question?";
       }
 
-      let displayError = `⚠️ AI Error: ${err.message}`;
-      if (err.message === 'NO_KEY') {
-        displayError = '⚠️ AI Key missing. Please add VITE_GEMINI_API_KEY to your .env.local file.';
-      }
-
-      setMessages(prev => [...prev, { role: 'ai', text: displayError }]);
+      setMessages(prev => [...prev, { role: 'ai', text: friendlyError }]);
     } finally {
       setLoading(false);
     }
@@ -168,7 +173,7 @@ export default function AiChatBot() {
           transform: isOpen ? 'rotate(45deg)' : 'none'
         }}
       >
-        {isOpen ? '✕' : '🔮'}
+        {isOpen ? '✕' : <svg viewBox="0 0 24 24" width="32" height="32" fill="white"><path d="M12,2C6.47,2,2,6.47,2,12s4.47,10,10,10,10-4.47,10-10S17.53,2,12,2Zm0,18c-4.41,0-8-3.59-8-8s3.59-8,8-8,8,3.59,8,8-3.59,8-8,8ZM8.33,7c0,.2,.04,.39,.12,.56s.21,.33,.38,.5l.48,.46c.15,.14,.27,.29,.35,.46s.12,.36,.12,.59-.04,.42-.12,.59-.2,.32-.35,.46l-.48,.46c-.17,.16-.29,.33-.38,.5s-.12,.37-.12,.58,.04,.39,.12,.58,.2,.33,.38,.5l.48,.46c.15,.14,.27,.3,.35,.46s.12,.35,.12,.57-.04,.4-.12,.57-.2,.33-.35,.46l-.48,.46c-.17,.16-.3,.33-.38,.5s-.12,.38-.12,.59,0,.39,.12,.56.21,.32,.38,.48l.48,.46c.15,.14,.27,.29,.35,.46s.12,.36,.12,.59-.04,.42-.12,.59-.2,.32-.35,.46l-.48,.46c-.17,.16-.3,.33-.38,.5s-.12,.37-.12,.58,.04,.4,.12,.58,.2,.33,.38,.5l.48,.46c.15,.14,.27,.3,.35,.46,.08,.17,.12,.35,.12,.57,0,.21-.04,.4-.12,.57s-.2,.33-.35,.46l-.48,.46c-.17,.16-.3,.33-.38,.5s-.12,.38-.12,.59c0,.48,.18,.88,.54,1.21s.79,.49,1.31,.49,1.1-.16,1.48-.49,.56-.73,.56-1.21-.18-.88-.54-1.21l-.48-.46c-0.15-0.14-0.27-0.29-0.35-0.46s-0.12-0.36-0.12-0.59,0.04-0.42,0.12-0.59,0.2-0.32,0.35-0.46l.48-0.46c0.17-0.16,0.3-0.33,0.38-0.5s0.12-0.37,0.12-0.58c0-0.21-0.04-0.4-0.12-0.58s-0.2-0.33-0.35-0.46l-0.48-0.46c-0.15-0.14-0.27-0.3-0.35-0.46s-0.12-0.35-0.12-0.57c0-0.21,0.04-0.4,0.12-0.57s0.2-0.33,0.35-0.46l.48-0.46c0.17-0.16,0.3-0.33,0.38-0.5s0.12-0.38,0.12-0.59c0-0.48-0.18-0.88-0.54-1.21s-0.79-0.49-1.31-0.49c-0.64,0-1.1,0.16-1.4,0.49s-0.45,0.73-0.45,1.21Z" /></svg>}
       </button>
 
       {isOpen && (
@@ -188,7 +193,9 @@ export default function AiChatBot() {
             padding: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)',
             display: 'flex', alignItems: 'center', gap: '0.8rem', background: 'rgba(212,175,55,0.05)'
           }}>
-            <div style={{ fontSize: '1.2rem' }}>🔮</div>
+            <div style={{ fontSize: '1.2rem' }}>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="#D4AF37"><path d="M12,2C6.47,2,2,6.47,2,12s4.47,10,10,10,10-4.47,10-10S17.53,2,12,2Zm0,18c-4.41,0-8-3.59-8-8s3.59-8,8-8,8,3.59,8,8-3.59,8-8,8ZM8.33,7c0,.2,.04,.39,.12,.56s.21,.33,.38,.5l.48,.46c.15,.14,.27,.29,.35,.46s.12,.36,.12,.59-.04,.42-.12,.59-.2,.32-.35,.46l-.48,.46c-.17,.16-.29,.33-.38,.5s-.12,.37-.12,.58,.04,.39,.12,.58,.2,.33,.38,.5l.48,.46c.15,.14,.27,.3,.35,.46s.12,.35,.12,.57-.04,.4-.12,.57-.2,.33-.35,.46l-.48,.46c-.17,.16-.3,.33-.38,.5s-.12,.38-.12,.59,0,.39,.12,.56.21,.32,.38,.48l.48,.46c.15,.14,.27,.29,.35,.46s.12,.36,.12,.59-.04,.42-.12,.59-.2,.32-.35,.46l-.48,.46c-.17,.16-.3,.33-.38,.5s-.12,.37-.12,.58,.04,.4,.12,.58,.2,.33,.38,.5l.48,.46c.15,.14,.27,.3,.35,.46,.08,.17,.12,.35,.12,.57,0,.21-.04,.4-.12,.57s-.2,.33-.35,.46l-.48,.46c-.17,.16-.3,.33-.38,.5s-.12,.38-.12,.59c0,.48,.18,.88,.54,1.21s.79,.49,1.31,.49,1.1-.16,1.48-.49,.56-.73,.56-1.21-.18-.88-.54-1.21l-.48-.46c-0.15-0.14-0.27-0.29-0.35-0.46s-0.12-0.36-0.12-0.59,0.04-0.42,0.12-0.59,0.2-0.32,0.35-0.46l.48-0.46c0.17-0.16,0.3-0.33,0.38-0.5s0.12-0.37,0.12-0.58c0-0.21-0.04-0.4-0.12-0.58s-0.2-0.33-0.35-0.46l-0.48-0.46c-0.15-0.14-0.27-0.3-0.35-0.46s-0.12-0.35-0.12-0.57c0-0.21,0.04-0.4,0.12-0.57s0.2-0.33,0.35-0.46l.48-0.46c0.17-0.16,0.3-0.33,0.38-0.5s0.12-0.38,0.12-0.59c0-0.48-0.18-0.88-0.54-1.21s-0.79-0.49-1.31-0.49c-0.64,0-1.1,0.16-1.4,0.49s-0.45,0.73-0.45,1.21Z" /></svg>
+            </div>
             <div style={{ flex: 1 }}>
               <p style={{ color: '#D4AF37', fontWeight: 700, margin: 0, fontSize: '0.9rem' }}>Vedic AI</p>
               <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0, fontSize: '0.7rem' }}>Online Assistant</p>
