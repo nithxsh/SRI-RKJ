@@ -70,9 +70,11 @@ export default function AiChatBot() {
       }
 
       // 2. Format history strictly (User -> Model -> User...)
-      // We take the existing messages and convert them to API format
+      // The Gemini API requires history to start with a 'user' message.
+      // Since our first message is an AI greeting, we skip it for the API payload.
       let history = messages
         .filter(m => m.role !== 'system')
+        .slice(1) // Skip the initial AI greeting
         .map(m => ({
           role: m.role === 'ai' ? 'model' : 'user',
           parts: [{ text: m.text }]
@@ -91,7 +93,6 @@ export default function AiChatBot() {
 
       // Final message must be the new user text
       if (lastRole === 'user') {
-        // If the last thing was a user message, we append to it (though rare in this UI)
         contents[contents.length - 1].parts[0].text += `\n\n${text}`;
       } else {
         contents.push({ role: 'user', parts: [{ text }] });
@@ -116,14 +117,20 @@ export default function AiChatBot() {
         }
       );
 
+      // 3. Handle API Errors specifically
       const data = await response.json();
       
       if (!response.ok) {
-        console.error("Gemini API Error:", data);
-        const errorMsg = data?.error?.message || 'CONNECTION_ERROR';
-        if (errorMsg.includes('API key not valid')) throw new Error('INVALID_KEY');
-        if (errorMsg.includes('quota')) throw new Error('QUOTA_EXCEEDED');
-        throw new Error(errorMsg);
+        console.error("Gemini API Error Detail:", data);
+        const code = response.status;
+        const msg = data?.error?.message || '';
+
+        if (code === 401 || code === 403) throw new Error('INVALID_KEY');
+        if (code === 429) throw new Error('QUOTA_EXCEEDED');
+        if (msg.includes('API key not valid')) throw new Error('INVALID_KEY');
+        if (msg.includes('quota')) throw new Error('QUOTA_EXCEEDED');
+        
+        throw new Error('CONNECTION_ERROR');
       }
 
       const aiResponse = data?.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -134,14 +141,16 @@ export default function AiChatBot() {
     } catch (err) {
       console.error("ChatBot Error Details:", err);
       
-      let friendlyError = "I'm having trouble connecting to the stars right now. Please try again in 10 seconds.";
+      let friendlyError = "I'm having trouble connecting to the stars right now. Please check your internet or try again in a moment.";
       
       if (err.message === 'NO_KEY' || err.message === 'INVALID_KEY') {
-        friendlyError = "⚠️ Divine Connection Error: AI API Key is missing or invalid. Please check your dashboard.";
+        friendlyError = "⚠️ Divine Connection Error: The AI API Key (VITE_GEMINI_API_KEY) is missing or invalid. Please ensure it is set in your environment variables.";
       } else if (err.message === 'QUOTA_EXCEEDED') {
-        friendlyError = "⚠️ High Traffic: The AI is currently overwhelmed with seekers. Please try again in a few minutes.";
+        friendlyError = "⚠️ High Traffic: The AI is currently overwhelmed with seekers. Please try again in 5-10 minutes.";
       } else if (err.message === 'EMPTY_RESPONSE') {
         friendlyError = "The cosmos was silent. Could you please rephrase your question?";
+      } else if (err.message === 'CONNECTION_ERROR') {
+        friendlyError = "The connection to the divine server was interrupted. Please check your network and try again.";
       }
 
       setMessages(prev => [...prev, { role: 'ai', text: friendlyError }]);
