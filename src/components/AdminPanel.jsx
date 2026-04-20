@@ -709,7 +709,16 @@ export default function AdminPanel() {
                         ['🎂 DOB', b.dob], ['🕐 Born', b.time], ['📍 Location', b.birthPlace],
                         ['📞 Contact', b.mobile], ['✉️ Email', b.email],
                         ['🎯 Goal', b.purpose === 'Other' ? b.otherPurpose || 'Other' : b.purpose],
-                                      {/* ── Assign/Confirmed Date ── */}
+                        ['🗓️ Pref. Date', b.preferredDate], ['⏰ Pref. Slot', b.preferredSlot],
+                      ].map(([label, value]) => (
+                        <div key={label} style={{ background: 'rgba(255,255,255,0.02)', padding: '0.8rem 1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                          <div style={{ fontSize: '0.65rem', color: 'var(--accent-gold)', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: 700 }}>{label}</div>
+                          <div style={{ color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 500 }}>{value || '—'}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* ── Assign/Confirmed Date ── */}
                     <div style={{ 
                       background: 'linear-gradient(135deg, rgba(32,178,170,0.08), rgba(32,178,170,0.02))', 
                       border: '1px solid rgba(32,178,170,0.25)', 
