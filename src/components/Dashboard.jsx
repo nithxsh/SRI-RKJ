@@ -174,7 +174,7 @@ export default function Dashboard() {
 
           <div class="footer">
             <p>Shri Namo Narayanaya Astrology Office, Mailpatti, Tamil Nadu</p>
-            <p>Contact: {import.meta.env.VITE_OFFICE_PHONE || '9751442007'}</p>
+            <p>Contact: {import.meta.env.VITE_OFFICE_PHONE}</p>
             <p>Thank you for seeking divine guidance.</p>
             <button onclick="window.print()" class="no-print" style="margin-top: 20px; padding: 10px 20px; background: #0A192F; color: white; border: none; border-radius: 5px; cursor: pointer;">Print Receipt</button>
           </div>

@@ -3,6 +3,8 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import ReviewsSection from './ReviewsSection';
+import { pdf } from '@react-pdf/renderer';
+import UnifiedReport from './UnifiedReport';
 import '../index.css';
 
 export default function Home() {
@@ -29,7 +31,7 @@ export default function Home() {
 
   // ── UPI Payment Config ──────────────────────────────────────────────
   const PAYMENT_CONFIG = {
-    vpa: import.meta.env.VITE_UPI_VPA || '9751442007@paytm', // Primary UPI ID
+    vpa: import.meta.env.VITE_UPI_VPA, // Primary UPI ID
     name: 'Shri Namo Narayanaya',
     fees: {
       'Vaasthu Planning': 1001,
@@ -83,17 +85,42 @@ export default function Home() {
         createdAt: serverTimestamp()
       });
       setBookingData(prev => ({ ...prev, id: docRef.id })); // Keep ID for payment update
-      // setBookingStep('payment');
+      
+      // Automatic Download for Guest/Preliminary Booking
+      if (bookingData.purpose) {
+        downloadBookingDocuments({ ...bookingData, id: docRef.id });
+      }
+
       setBookingStep('success');
     } catch (err) {
       console.error('Booking save failed:', err);
-      // Fallback
-      // setBookingStep('payment');
       setBookingStep('success');
     } finally {
       setSubmitLoading(false);
     }
   };
+
+  const downloadBookingDocuments = async (data) => {
+    try {
+      // 1. Fetch Real Astrological Data (Trial/Free API)
+      // No Vedic API calls needed for simple receipt
+      const vedicData = {};
+
+      // 2. Generate Unified Report (Receipt + Kundli)
+      const blob = await pdf(<UnifiedReport data={data} vedicData={vedicData} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Astro_Report_${data.name.replace(/\s+/g, '_')}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('PDF Download failed:', err);
+    }
+  };
+
+  // Expose openBookingModal globally
+  useEffect(() => { window._openBookingModal = openBookingModal; }, [currentUser]);
 
   useEffect(() => {
     observerRef.current = new IntersectionObserver((entries) => {
@@ -309,18 +336,18 @@ export default function Home() {
               <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'center' }}>
                 <span style={{ fontSize: '1.5rem', filter: 'drop-shadow(0 0 5px rgba(255,255,255,0.2))' }}>🌐</span>
                 <p style={{ color: 'var(--text-primary)', fontWeight: 600, margin: 0 }}>Social & Contact:</p>
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginLeft: '0.5rem' }}>
-                  <a href={`https://wa.me/91${import.meta.env.VITE_OFFICE_PHONE || '9751442007'}?text=Om%20Namo%20Narayana%2C%20I%20want%20to%20book%20a%20consultation.`} target="_blank" rel="noopener noreferrer" style={{ color: '#25D366' }} className="social-icon-btn" title="Chat on WhatsApp">
+                <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'center', marginLeft: '0.5rem' }}>
+                  <a href={`https://wa.me/91${import.meta.env.VITE_OFFICE_PHONE || '9751442007'}?text=Om%20Namo%20Narayana%2C%20I%20want%20to%20book%20a%20consultation.`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-gold)', opacity: 0.8 }} className="social-icon-btn" title="Chat on WhatsApp">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="28" height="28">
                       <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
                     </svg>
                   </a>
-                  <a href="https://www.facebook.com/profile.php?id=100008900615251" target="_blank" rel="noopener noreferrer" style={{ color: '#1877F2' }} className="social-icon-btn" title="Facebook Page">
+                  <a href="https://www.facebook.com/profile.php?id=100008900615251" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-gold)', opacity: 0.8 }} className="social-icon-btn" title="Facebook Page">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="28" height="28">
                       <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
                     </svg>
                   </a>
-                  <a href="mailto:nithishog31@gmail.com?subject=Consultation%20Inquiry" style={{ color: '#EA4335' }} className="social-icon-btn" title="Send Email">
+                  <a href="mailto:nithishog31@gmail.com?subject=Consultation%20Inquiry" style={{ color: 'var(--accent-gold)', opacity: 0.8 }} className="social-icon-btn" title="Send Email">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="28" height="28">
                       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                       <polyline points="22,6 12,13 2,6"></polyline>
@@ -540,6 +567,9 @@ export default function Home() {
                   <button type="submit" disabled={submitLoading} className="btn-primary" style={{ marginTop: '1rem', padding: '1.2rem', fontSize: '1.1rem', borderRadius: '8px' }}>
                     {submitLoading ? '⏳ Submitting...' : 'Confirm Booking Request'}
                   </button>
+                  <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem', fontStyle: 'italic' }}>
+                    (Note: payment still not confirmed)
+                  </p>
                 </form>
               </>
             )}
@@ -580,11 +610,25 @@ export default function Home() {
                       if (!bookingData.transactionId) { alert('Please enter transaction ID'); return; }
                       setSubmitLoading(true);
                       try {
-                        const { doc, updateDoc } = await import('firebase/firestore');
-                        await updateDoc(doc(db, 'bookings', bookingData.id), {
-                          transactionId: bookingData.transactionId,
-                          paymentStatus: 'waiting_verification'
-                        });
+                        const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+                        // Prepare refined booking data for sync with profile
+                        const finalData = {
+                          ...bookingData,
+                          id: bookingData.id,
+                          email: bookingData.email,
+                          userEmail: currentUser?.email || bookingData.email,
+                          userId: currentUser?.uid || '',
+                          createdAt: serverTimestamp(),
+                          status: 'pending',
+                          paymentStatus: 'waiting_verification',
+                          hasReview: false
+                        };
+                        
+                        await setDoc(doc(db, 'bookings', bookingData.id), finalData);
+                        
+                        // Re-download updated documents with transaction ID
+                        downloadBookingDocuments(finalData);
+                        
                         setBookingStep('success');
                       } catch(err) { console.error(err); setBookingStep('success'); }
                       finally { setSubmitLoading(false); }
@@ -593,24 +637,51 @@ export default function Home() {
                   >
                     Confirm & Complete Booking
                   </button>
+                  <p style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.5rem', fontStyle: 'italic' }}>
+                    (Note: payment still not confirmed - pending admin verification)
+                  </p>
                 </div>
               </div>
             )}
 
             {bookingStep === 'success' && (
-              <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-                <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>✨</div>
-                <h2 style={{ fontSize: '1.8rem', color: 'var(--accent-gold)', marginBottom: '1rem' }}>Request Received</h2>
-                <p className="text-secondary" style={{ marginBottom: '1rem', lineHeight: '1.6' }}>We have received your birth details and {bookingData.category} request.</p>
-                <div style={{ background: 'rgba(32,178,170,0.1)', padding: '1rem', borderRadius: '10px', marginBottom: '2.5rem', border: '1px solid rgba(32,178,170,0.2)' }}>
-                  {/* <p style={{ color: '#20B2AA', fontSize: '0.9rem', fontWeight: 600 }}>Status: Payment Under Verification</p>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '0.3rem' }}>Our admin will verify the payment and confirm your slot via WhatsApp/Push Notification shortly.</p> */}
-                  <p style={{ color: '#20B2AA', fontSize: '0.9rem', fontWeight: 600 }}>Status: Request Submitted</p>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '0.3rem' }}>Our admin will review your request and confirm your slot via WhatsApp/Push Notification shortly.</p>
+              <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                <div style={{ 
+                  fontSize: '5rem', 
+                  marginBottom: '1rem', 
+                  animation: 'namoReveal 1s ease-out',
+                  filter: 'drop-shadow(0 0 20px var(--accent-gold))'
+                }}>🔱</div>
+                <h2 style={{ fontSize: '2.2rem', color: 'var(--accent-gold)', marginBottom: '0.8rem', fontFamily: 'var(--font-heading)' }}>Request Received</h2>
+                <p className="text-primary" style={{ marginBottom: '1.5rem', lineHeight: '1.6', fontSize: '1.1rem' }}>
+                   Om Namo Narayana! <br/>
+                   Your details for <strong style={{ color: 'var(--accent-gold)' }}>{bookingData.category}</strong> have been securely transmitted to our Divine records.
+                </p>
+                
+                <div style={{ 
+                   background: 'rgba(32,178,170,0.08)', 
+                   padding: '1.5rem', 
+                   borderRadius: '16px', 
+                   marginBottom: '2.5rem', 
+                   border: '1px solid rgba(32,178,170,0.25)',
+                   textAlign: 'left'
+                }}>
+                  <p style={{ color: 'var(--accent-teal)', fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.5rem', letterSpacing: '1px' }}>🛡️ Next Steps</p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: '1.5' }}>
+                    1. Our office will verify your request shortly.<br/>
+                    2. You will receive a <strong>WhatsApp</strong> and <strong>Push Notification</strong> once the slot is confirmed.<br/>
+                    3. Track your request and see divine advice in your new <strong>Profile</strong>.
+                  </p>
                 </div>
-                <button className="btn-primary" onClick={() => { setShowBookingModal(false); setTimeout(() => setBookingStep('category'), 500); }} style={{ padding: '1rem 3rem', borderRadius: '30px' }}>
-                  Return to Home
-                </button>
+
+                <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column' }}>
+                  <button className="btn-primary" onClick={() => { setShowBookingModal(false); setTimeout(() => window._setView('profile'), 300); }} style={{ padding: '1.2rem', borderRadius: '15px', fontWeight: 800 }}>
+                    🕉️ Go to My Profile
+                  </button>
+                  <button className="btn-secondary" onClick={() => { setShowBookingModal(false); setTimeout(() => setBookingStep('category'), 500); }} style={{ padding: '0.8rem', borderRadius: '15px', border: 'none', background: 'transparent', opacity: 0.6, fontSize: '0.9rem' }}>
+                    Return to home
+                  </button>
+                </div>
               </div>
             )}
           </div>

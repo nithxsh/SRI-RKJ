@@ -3,8 +3,10 @@ import Navbar from './components/Navbar';
 import Home from './components/Home';
 import Dashboard from './components/Dashboard';
 import AdminPanel from './components/AdminPanel';
+import Profile from './components/Profile';
 import Login from './components/Login';
-import AiChatBot from './components/AiChatBot';
+// removed AiChatBot
+import Footer from './components/Footer';
 import StarsBackground from './components/StarsBackground';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { messaging, db } from './firebase';
@@ -12,7 +14,7 @@ import { getToken } from 'firebase/messaging';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import './index.css';
 
-const ADMIN_EMAIL = 'nithishog31@gmail.com';
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
 // Route guard: redirects unauthenticated users away from protected pages
 function ProtectedRoute({ children, setView }) {
@@ -204,18 +206,20 @@ function AppInner() {
       <Navbar setView={setCurrentView} currentView={currentView} />
       {currentView === 'home' && <Home />}
       {currentView === 'login' && <Login setView={setCurrentView} />}
-      {currentView === 'dashboard' && (
-        <ProtectedRoute setView={setCurrentView}>
-          <Dashboard />
-        </ProtectedRoute>
-      )}
       {currentView === 'admin' && (
         <ProtectedRoute setView={setCurrentView}>
           <AdminPanel />
         </ProtectedRoute>
       )}
+      {currentView === 'profile' && (
+        <ProtectedRoute setView={setCurrentView}>
+          <Profile />
+        </ProtectedRoute>
+      )}
       {/* Floating AI Chatbot — visible on all pages */}
-      <AiChatBot />
+      {/* Removed AiChatBot */}
+      
+      <Footer setView={setCurrentView} />
     </div>
   );
 }

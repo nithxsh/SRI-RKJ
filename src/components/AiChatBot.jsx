@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 
-const OFFICE_CONTACT = import.meta.env.VITE_OFFICE_PHONE || '9751442007';
-const OFFICE_CONTACT_ALT = import.meta.env.VITE_OFFICE_PHONE_ALT || '9865546763';
+const OFFICE_CONTACT = import.meta.env.VITE_OFFICE_PHONE;
+const OFFICE_CONTACT_ALT = import.meta.env.VITE_OFFICE_PHONE_ALT;
 
 const SYSTEM_PROMPT = `You are a helpful AI assistant for "Shri Namo Narayanaya Astrology Office" in Mailpatti, Tamil Nadu. 
 You assist visitors with questions about Vedic astrology, Vaasthu Shastra, numerology, and the services offered by Shri Astrologer RKJ Thulaseraja Acharya.
@@ -65,9 +65,7 @@ export default function AiChatBot() {
     setLoading(true);
 
     try {
-      if (!GEMINI_API_KEY || GEMINI_API_KEY === 'your-gemini-key-here') {
-        throw new Error('NO_KEY');
-      }
+      // Key is hardcoded for reliability
 
       // 2. Format history strictly for Gemini API (User -> Model -> User...)
       // Gemini requires first message to be 'user' and roles to alternate perfectly.
@@ -126,14 +124,15 @@ export default function AiChatBot() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            system_instruction: { 
-              parts: [{ text: SYSTEM_PROMPT }] 
-            },
-            contents: apiContents,
+            contents: [
+              {
+                role: 'user',
+                parts: [{ text: `SYSTEM INSTRUCTION: ${SYSTEM_PROMPT}\n\nUSER REQUEST: ${text}` }]
+              }
+            ],
             generationConfig: { 
-              maxOutputTokens: 1000, 
-              temperature: 0.7,
-              topP: 0.9
+              maxOutputTokens: 800, 
+              temperature: 0.7 
             }
           })
         }

@@ -20,7 +20,7 @@ export default function Login({ setView }) {
       } else {
         await login(email, password);
       }
-      setView('dashboard');
+      setView('home');
     } catch (err) {
       setError(err.message || 'Failed to authenticate');
     }
@@ -29,10 +29,9 @@ export default function Login({ setView }) {
 
   async function handleGoogleLogin() {
     try {
-      setError('');
       setLoading(true);
       await loginWithGoogle();
-      setView('dashboard');
+      setView('home');
     } catch (err) {
       setError('Failed to sign in with Google');
     }

@@ -3,6 +3,7 @@ import '../index.css';
 
 export default function Astrologers() {
   const [showModal, setShowModal] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const partners = [
     { name: 'Sri Sakthi Builders', desc: 'Vaasthu & Construction', loc: 'OMR, Chennai', icon: '🏗️' },
@@ -79,18 +80,37 @@ export default function Astrologers() {
       </div>
 
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content glass-panel" onClick={(e) => e.stopPropagation()}>
-            <button className="close-btn" onClick={() => setShowModal(false)}>✕</button>
-            <h2 style={{ fontSize: '1.8rem', marginBottom: '1rem' }}>Contact Office</h2>
-            <p className="text-secondary">Send a message to schedule your consultation.</p>
-            <form className="booking-form" onSubmit={(e) => { e.preventDefault(); alert('Message Sent!'); setShowModal(false); }}>
-              <input type="text" placeholder="Your Name" required />
-              <input type="tel" placeholder="Your Phone Number" required />
-              <input type="date" />
-              <textarea placeholder="How can we help you?" rows="3" required></textarea>
-              <button type="submit" className="btn-primary" style={{width: '100%', marginTop: '1rem'}}>Send Request</button>
-            </form>
+        <div className="modal-overlay" onClick={() => { setShowModal(false); setSuccess(false); }}>
+          <div className="modal-content glass-panel" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center' }}>
+            <button className="close-btn" onClick={() => { setShowModal(false); setSuccess(false); }}>✕</button>
+            
+            {success ? (
+              <div style={{ padding: '2rem 0' }}>
+                <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>🕉️</div>
+                <h2 style={{ color: 'var(--accent-gold)', marginBottom: '1rem' }}>Message Sent</h2>
+                <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '2rem' }}>
+                  Your request has been received by the divine office. Our administrator will reach out to you shortly.
+                </p>
+                <button className="btn-primary" onClick={() => { setShowModal(false); setSuccess(false); }} style={{ padding: '0.8rem 2.5rem', borderRadius: '30px' }}>
+                  Done
+                </button>
+              </div>
+            ) : (
+              <>
+                <h2 style={{ fontSize: '1.8rem', marginBottom: '1rem', color: 'var(--accent-gold)' }}>Contact Office</h2>
+                <p className="text-secondary" style={{ marginBottom: '1.5rem' }}>Send a message to schedule your consultation.</p>
+                <form className="booking-form" onSubmit={(e) => { e.preventDefault(); setSuccess(true); }}>
+                  <input type="text" placeholder="Your Name" required />
+                  <input type="tel" placeholder="Your Phone Number" required />
+                  <input type="date" />
+                  <textarea placeholder="How can we help you?" rows="3" required></textarea>
+                  <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '1rem', padding: '1rem' }}>Send Request</button>
+                  <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem', fontStyle: 'italic' }}>
+                    (Note: payment still not confirmed)
+                  </p>
+                </form>
+              </>
+            )}
           </div>
         </div>
       )}

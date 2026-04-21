@@ -19,6 +19,7 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  color-scheme: dark; /* Force browser UI elements like pickers/scrollbars to dark mode */
 }
 
 body {
@@ -66,6 +67,24 @@ button {
   border: 1px solid var(--glass-border);
   border-radius: 16px;
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Form Elements Reset */
+input, select, textarea, option {
+  background-color: rgba(0, 0, 0, 0.4);
+  color: white;
+  border: 1px solid var(--glass-border);
+  font-family: var(--font-body);
+}
+
+option {
+  background-color: var(--bg-space); /* Solid dark background for dropdown items */
+  color: white;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent-gold);
 }
 
 /* Base Layout Classes */
@@ -503,14 +522,17 @@ button {
 }
 
 .mobile-nav-items {
-  display: grid;
-  grid-template-columns: 1fr 1fr 75px 1fr 1fr;
+  display: flex;
+  justify-content: space-around;
   align-items: center;
   max-width: 500px;
   margin: 0 auto;
+  width: 100%;
+  padding: 0 5%;
 }
 
 .mobile-nav-item {
+  flex: 1;
   background: none;
   border: none;
   color: rgba(255, 255, 255, 0.4);
@@ -545,8 +567,10 @@ button {
 }
 
 @keyframes dotFadeIn {
-  from { opacity: 0; transform: scale(0); }
-  to { opacity: 1; transform: scale(1); }
+}
+
+.mobile-nav-item.active .icon {
+  filter: drop-shadow(0 0 8px rgba(255,255,255,0.3));
 }
 
 .mobile-nav-item .icon {
@@ -554,30 +578,42 @@ button {
   transition: all 0.3s ease;
 }
 
-.main-action {
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: linear-gradient(135deg, #D4AF37, #facd49);
-  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.4);
-  border: 4.5px solid var(--bg-space);
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  margin-top: -15px;
-}
+/* Removed legacy main-action styles */
 
-.main-action:active {
-  transform: scale(0.9);
-}
+/* Profile Mobile Fixes */
+@media (max-width: 600px) {
+  .profile-container {
+    padding-top: 80px !important;
+    padding-left: 15px !important;
+    padding-right: 15px !important;
+  }
+  
+  .profile-header {
+    padding: 1.5rem !important;
+    border-radius: 20px !important;
+    text-align: center;
+  }
 
-.main-action svg {
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-}
+  .booking-item {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1.2rem !important;
+    padding: 1.2rem !important;
+  }
 
-.cursor-pointer {
-  cursor: pointer;
+  .booking-item > div:last-child {
+    width: 100%;
+    flex-direction: row !important;
+    gap: 0.5rem !important;
+  }
+
+  .booking-item .btn-primary, 
+  .booking-item .btn-secondary {
+    flex: 1;
+    padding: 10px !important;
+    font-size: 0.75rem !important;
+    justify-content: center;
+  }
 }
 
 .nav-tab {
@@ -839,4 +875,106 @@ button {
 .social-icon-btn:hover {
   transform: translateY(-3px) scale(1.1);
   filter: drop-shadow(0 4px 8px rgba(255, 255, 255, 0.15));
+}
+
+/* Premium Profile Styling */
+.profile-tabs {
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 1rem;
+}
+
+.profile-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 2rem;
+  background: none;
+  border: none;
+  border-top: 1px solid transparent;
+  margin-top: -1px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+  opacity: 0.6;
+}
+
+.profile-tab.active {
+  border-top: 2px solid var(--accent-gold);
+  color: var(--accent-gold);
+  opacity: 1;
+}
+
+.wisdom-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
+
+.wisdom-card {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.wisdom-card:hover {
+  transform: scale(1.02);
+}
+
+.wisdom-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.8));
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 1.5rem;
+}
+
+.wisdom-card-advice {
+  font-size: 0.9rem;
+  color: white;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Booking Cards */
+.booking-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.2s;
+}
+
+.booking-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.booking-status-pill {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+@media (max-width: 768px) {
+  .profile-tab {
+    padding: 1rem 1rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.5px;
+  }
 }
